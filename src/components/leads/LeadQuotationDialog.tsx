@@ -31,7 +31,8 @@ const DEFAULT_ROWS = [
   { title: 'Earthing Cable', values: [''] },
   { title: 'LA Cable', values: [''] },
   { title: 'Gross ₹', values: [''] },
-  { title: 'Subsidy ₹', values: [''] },
+  { title: 'Central Gov Subsidy ₹', values: [''] },
+  { title: 'Gujarat Gov Subsidy ₹', values: [''] },
   { title: 'Net Payable ₹', values: [''] },
   { title: 'Electricity ₹/unit', values: [''] },
   { title: 'GEDA Registration ₹', values: [''] },
@@ -79,7 +80,7 @@ export default function LeadQuotationDialog({ isOpen, onClose, lead, onRefresh, 
         });
         if (res.data?.success) {
           const grouped: Record<string, { label: string, value: string }[]> = {};
-          
+
           // Map backend keys to dropdown row keys
           const keyMap: Record<string, string> = {
             'module': 'solar module product',
@@ -96,7 +97,7 @@ export default function LeadQuotationDialog({ isOpen, onClose, lead, onRefresh, 
           };
 
           res.data.data.forEach((opt: any) => {
-            const rowKey = keyMap[opt.key] || opt.key;                                 
+            const rowKey = keyMap[opt.key] || opt.key;
             if (!grouped[rowKey]) grouped[rowKey] = [];
             grouped[rowKey].push({ label: opt.label, value: opt.value });
           });
@@ -130,31 +131,73 @@ export default function LeadQuotationDialog({ isOpen, onClose, lead, onRefresh, 
           const numOptions = qData.options?.length || 1;
           const titleMap: Record<string, string> = {
             'system capacity': 'size kw',
-            'subsidy': 'subsidy ₹',
+            'subsidy': 'central gov subsidy ₹',
+            'subsidy ₹': 'central gov subsidy ₹',
+            'central subsidy': 'central gov subsidy ₹',
+            'central subsidy ₹': 'central gov subsidy ₹',
+            'central gov subsidy': 'central gov subsidy ₹',
+            'central gov subsidy ₹': 'central gov subsidy ₹',
+            'central govt subsidy': 'central gov subsidy ₹',
+            'central govt subsidy ₹': 'central gov subsidy ₹',
+            'cen.govt subsidy': 'central gov subsidy ₹',
+            'cen.govt subsidy ₹': 'central gov subsidy ₹',
+            'cen govt subsidy': 'central gov subsidy ₹',
+            'cen govt subsidy ₹': 'central gov subsidy ₹',
+            'guj.govt subsidy': 'gujarat gov subsidy ₹',
+            'guj.govt subsidy ₹': 'gujarat gov subsidy ₹',
+            'guj govt subsidy': 'gujarat gov subsidy ₹',
+            'guj govt subsidy ₹': 'gujarat gov subsidy ₹',
+            'gujrat gov subsidy': 'gujarat gov subsidy ₹',
+            'gujrat gov subsidy ₹': 'gujarat gov subsidy ₹',
+            'gujarat gov subsidy': 'gujarat gov subsidy ₹',
+            'gujarat gov subsidy ₹': 'gujarat gov subsidy ₹',
+            'gujrat subsidy': 'gujarat gov subsidy ₹',
+            'gujrat subsidy ₹': 'gujarat gov subsidy ₹',
+            'gujarat subsidy': 'gujarat gov subsidy ₹',
+            'gujarat subsidy ₹': 'gujarat gov subsidy ₹',
             'effective price': 'net payable ₹',
             'customer payable amount': 'gross ₹',
           };
 
           const legacyRows = [
-            'no. of panel', 
-            'wp', 
-            'system capacity', 
-            'meter charges registration', 
-            'customer payable amount', 
-            'subsidy', 
-            'effective price'
+            'no. of panel',
+            'wp',
+            'system capacity',
+            'meter charges registration',
+            'customer payable amount',
+            'subsidy',
+            'subsidy ₹',
+            'effective price',
+            'central subsidy',
+            'central subsidy ₹',
+            'central gov subsidy',
+            'central gov subsidy ₹',
+            'central govt subsidy',
+            'central govt subsidy ₹',
+            'cen.govt subsidy',
+            'cen.govt subsidy ₹',
+            'cen govt subsidy',
+            'cen govt subsidy ₹',
+            'guj.govt subsidy',
+            'guj.govt subsidy ₹',
+            'guj govt subsidy',
+            'guj govt subsidy ₹',
+            'gujrat gov subsidy',
+            'gujrat gov subsidy ₹',
+            'gujarat gov subsidy',
+            'gujarat gov subsidy ₹',
+            'gujrat subsidy',
+            'gujrat subsidy ₹',
+            'gujarat subsidy',
+            'gujarat subsidy ₹'
           ];
 
           const newRows = DEFAULT_ROWS.map(defRow => {
-            const defTitleLower = defRow.title.toLowerCase();
-            let oldRow = qData.rows.find((r: any) => r.title.toLowerCase() === defTitleLower);
-            
-            if (!oldRow) {
-              const oldTitleEquiv = Object.keys(titleMap).find(k => titleMap[k] === defTitleLower);
-              if (oldTitleEquiv) {
-                oldRow = qData.rows.find((r: any) => r.title.toLowerCase() === oldTitleEquiv);
-              }
-            }
+            const defTitleLower = defRow.title.toLowerCase().trim();
+            const oldRow = qData.rows.find((r: any) => {
+              const t = (r?.title || '').toLowerCase().trim();
+              return t === defTitleLower || titleMap[t] === defTitleLower;
+            });
 
             const values = Array(numOptions).fill('');
             if (oldRow && Array.isArray(oldRow.values)) {
@@ -170,7 +213,7 @@ export default function LeadQuotationDialog({ isOpen, onClose, lead, onRefresh, 
             const rTitle = r.title.toLowerCase().trim();
             const inDefault = DEFAULT_ROWS.some(dr => dr.title.toLowerCase().trim() === rTitle);
             const inLegacy = legacyRows.includes(rTitle);
-            
+
             if (!inDefault && !inLegacy) {
               const values = Array(numOptions).fill('');
               if (Array.isArray(r.values)) {
@@ -292,23 +335,35 @@ export default function LeadQuotationDialog({ isOpen, onClose, lead, onRefresh, 
     newRows[rowIndex].values[colIndex] = val;
 
     const grossIdx = newRows.findIndex(r => r.title.trim().toUpperCase() === 'GROSS ₹');
-    const subsidyIdx = newRows.findIndex(r => r.title.trim().toUpperCase() === 'SUBSIDY ₹');
+    const subsidyIdx = newRows.findIndex(r => {
+      const t = r.title.trim().toUpperCase();
+      return (t.includes('SUBSIDY') || t.includes('CENTRAL') || t.includes('CEN.')) && !t.includes('GUJ') && !t.includes('NET') && !t.includes('LESS');
+    });
+    const gujaratSubsidyIdx = newRows.findIndex(r => {
+      const t = r.title.trim().toUpperCase();
+      return t.includes('GUJ') && t.includes('SUBSIDY');
+    });
     const netIdx = newRows.findIndex(r => r.title.trim().toUpperCase() === 'NET PAYABLE ₹');
 
-    if (grossIdx !== -1 && subsidyIdx !== -1 && netIdx !== -1) {
+    if (grossIdx !== -1 && netIdx !== -1) {
       const grossVal = parseFloat(newRows[grossIdx].values[colIndex]) || 0;
-      let subsidyVal = parseFloat(newRows[subsidyIdx].values[colIndex]) || 0;
-      
-      if (subsidyVal > grossVal) {
-        subsidyVal = grossVal;
+      let subsidyVal = subsidyIdx !== -1 ? (parseFloat(newRows[subsidyIdx].values[colIndex]) || 0) : 0;
+      let gujaratSubsidyVal = gujaratSubsidyIdx !== -1 ? (parseFloat(newRows[gujaratSubsidyIdx].values[colIndex]) || 0) : 0;
+
+      if (grossVal > 0 && (subsidyVal + gujaratSubsidyVal) > grossVal) {
         if (rowIndex === subsidyIdx) {
-          toast.warning('Subsidy cannot be greater than Gross');
+          subsidyVal = Math.max(0, grossVal - gujaratSubsidyVal);
+          toast.warning('Total Subsidy cannot be greater than Gross');
           newRows[subsidyIdx].values[colIndex] = subsidyVal.toString();
+        } else if (gujaratSubsidyIdx !== -1 && rowIndex === gujaratSubsidyIdx) {
+          gujaratSubsidyVal = Math.max(0, grossVal - subsidyVal);
+          toast.warning('Total Subsidy cannot be greater than Gross');
+          newRows[gujaratSubsidyIdx].values[colIndex] = gujaratSubsidyVal.toString();
         }
       }
 
-      const netVal = grossVal - subsidyVal;
-      newRows[netIdx].values[colIndex] = Math.max(0, netVal).toString();
+      const netVal = Math.max(0, grossVal - subsidyVal - gujaratSubsidyVal);
+      newRows[netIdx].values[colIndex] = netVal.toString();
     }
 
     // Keep old behavior just in case they revert row titles
@@ -319,7 +374,8 @@ export default function LeadQuotationDialog({ isOpen, onClose, lead, onRefresh, 
     if (effectivePriceIdx !== -1 && customerPayableIdx !== -1 && oldSubsidyIdx !== -1) {
       const payableVal = parseFloat(newRows[customerPayableIdx].values[colIndex]) || 0;
       const subVal = parseFloat(newRows[oldSubsidyIdx].values[colIndex]) || 0;
-      newRows[effectivePriceIdx].values[colIndex] = (payableVal - subVal).toString();
+      const gujSubVal = gujaratSubsidyIdx !== -1 ? (parseFloat(newRows[gujaratSubsidyIdx].values[colIndex]) || 0) : 0;
+      newRows[effectivePriceIdx].values[colIndex] = Math.max(0, payableVal - subVal - gujSubVal).toString();
     }
 
     setRows(newRows);
@@ -353,7 +409,7 @@ export default function LeadQuotationDialog({ isOpen, onClose, lead, onRefresh, 
       }, {
         headers: { Authorization: `Bearer ${getAuthToken()}` }
       });
-      
+
       if (res.data?.success) {
         setApiOptions(prev => {
           const current = prev[rowKey] || [];
@@ -414,7 +470,7 @@ export default function LeadQuotationDialog({ isOpen, onClose, lead, onRefresh, 
                 const toastId = toast.loading('Downloading PDF...');
                 const qData = { date, solarModule, inverter, options, rows };
                 const apiUrl = baseUrl.getBaseUrl;
-                
+
                 const response = await axios.post(`${apiUrl}quotation/generate`, {
                   quotation: qData,
                   lead: lead
@@ -422,19 +478,19 @@ export default function LeadQuotationDialog({ isOpen, onClose, lead, onRefresh, 
                   responseType: 'blob',
                   headers: { Authorization: `Bearer ${getAuthToken()}` }
                 });
-                
+
                 const blobUrl = window.URL.createObjectURL(response.data);
                 const link = document.createElement('a');
                 link.href = blobUrl;
                 const clientName = (lead?.fullName || lead?.leadrefranceName || lead?.leadrefrance || 'Client').replace(/[^a-zA-Z0-9 ]/g, '').trim().replace(/\s+/g, '_');
                 const d = new Date();
                 const pad = (n: number) => String(n).padStart(2, '0');
-                const dateStr = `${pad(d.getDate())}-${pad(d.getMonth()+1)}-${d.getFullYear()}_${pad(d.getHours())}-${pad(d.getMinutes())}-${pad(d.getSeconds())}`;
+                const dateStr = `${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()}_${pad(d.getHours())}-${pad(d.getMinutes())}-${pad(d.getSeconds())}`;
                 link.download = `Quotation_${clientName}_${dateStr}.pdf`;
                 document.body.appendChild(link);
                 link.click();
                 link.remove();
-                
+
                 toast.update(toastId, { render: 'PDF Downloaded!', type: 'success', isLoading: false, autoClose: 3000 });
               } catch (e) {
                 toast.dismiss();
@@ -469,11 +525,11 @@ export default function LeadQuotationDialog({ isOpen, onClose, lead, onRefresh, 
                   const year = d.getFullYear();
                   const month = pad(d.getMonth() + 1);
                   const day = pad(d.getDate());
-                  
+
                   const now = new Date();
                   const hours = pad(now.getHours());
                   const minutes = pad(now.getMinutes());
-                  
+
                   setDate(`${year}-${month}-${day}T${hours}:${minutes}`);
                 }
               }}
@@ -523,7 +579,7 @@ export default function LeadQuotationDialog({ isOpen, onClose, lead, onRefresh, 
             </button>
             <span className="text-xs text-gray-400">Max 5 options</span>
           </div>
-          
+
           <div className="overflow-x-auto border border-gray-300 rounded">
             <table className="w-full text-left text-sm border-collapse">
               <thead>
@@ -532,12 +588,12 @@ export default function LeadQuotationDialog({ isOpen, onClose, lead, onRefresh, 
                   {options.map((opt, i) => (
                     <th key={i} className="p-2 border border-secondary font-bold uppercase text-xs text-center relative group">
                       <div className="flex items-center justify-between gap-1">
-                        <input 
-                          type="text" 
-                          value={opt} 
+                        <input
+                          type="text"
+                          value={opt}
                           onChange={(e) => handleOptionNameChange(i, e.target.value)}
                           className="bg-white border border-gray-200 text-gray-800 font-bold uppercase text-xs outline-none w-full placeholder-gray-400 px-2 py-1.5 rounded"
-                          placeholder={`OPTION ${i+1}`}
+                          placeholder={`OPTION ${i + 1}`}
                         />
                         {options.length > 1 && (
                           <button
