@@ -12,6 +12,7 @@ export const baseUrl = {
   findUserById: `${API}users`,
   deleteUser: `${API}users`,
   currentStaff: `${API}staff/me`,
+  changePassword: `${API}staff/change-password`,
   addRole: `${API}role`,
   getAllRoles: `${API}role`,
   findRoleById: `${API}role`,
