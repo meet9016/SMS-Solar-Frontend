@@ -4,12 +4,13 @@ import { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import { baseUrl, clearAuthToken, getAuthToken } from '@/config';
 import { useRouter } from 'next/router';
-import { Bell, CheckCircle, CheckCheck, LogOut, Menu } from 'lucide-react';
+import { Bell, CheckCircle, CheckCheck, LogOut, Menu, KeyRound, ChevronDown, Lock } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { io } from 'socket.io-client';
 import Swal from 'sweetalert2';
 import { useAppSelector } from '@/redux/hooks';
+import ChangePasswordDialog from './ChangePasswordDialog';
 
 interface Notification {
   _id: string;
@@ -38,9 +39,12 @@ export default function Header({ toggleSidebar }: HeaderProps) {
     email?: string;
     role?: { roleName: string };
   } | null>(null);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
   const router = useRouter();
   const dropdownRef = useRef<HTMLDivElement>(null);
-  
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+
   const currentStaff = useAppSelector((state) => state.auth.currentStaff);
 
   const isLoginPage = router?.pathname === "/login";
@@ -53,11 +57,11 @@ export default function Header({ toggleSidebar }: HeaderProps) {
     if (path === "/leads/kanban") return "Leads Kanban";
     if (path === "/setup") return "Setup";
     if (path === "/tasks") return "Tasks";
-    
+
     const segments = path.split('/').filter(Boolean);
     if (segments.length > 0) {
       return segments
-        .map((seg) => 
+        .map((seg) =>
           seg
             .split('-')
             .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
@@ -157,7 +161,7 @@ export default function Header({ toggleSidebar }: HeaderProps) {
     if (!token || !currentStaff) return;
 
     let socket: any;
-    
+
     const user = currentStaff;
     setCurrentUser(user as any);
     const currentUserId = user?._id;
@@ -293,6 +297,9 @@ export default function Header({ toggleSidebar }: HeaderProps) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setShowNotifications(false);
       }
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+        setShowProfileMenu(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -307,11 +314,11 @@ export default function Header({ toggleSidebar }: HeaderProps) {
       await axios.put(`${base}/notification/mark-read/${notifId}`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       // Update the notification to mark it as read
-      setNotifications(prev => prev.map(notification => 
-        notification._id === notifId 
-          ? { ...notification, isRead: true } 
+      setNotifications(prev => prev.map(notification =>
+        notification._id === notifId
+          ? { ...notification, isRead: true }
           : notification
       ));
     } catch (error) {
@@ -329,7 +336,7 @@ export default function Header({ toggleSidebar }: HeaderProps) {
       await axios.put(`${base}/notification/mark-all-read`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       // Mark all notifications as read in the state
       setNotifications(prev => prev.map(notification => ({
         ...notification,
@@ -351,9 +358,9 @@ export default function Header({ toggleSidebar }: HeaderProps) {
         await axios.put(`${base}/notification/mark-read/${notif._id}`, {}, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        
+
         // Update the state to mark this notification as read
-        setNotifications(prev => prev.map(n => 
+        setNotifications(prev => prev.map(n =>
           n._id === notif._id ? { ...n, isRead: true } : n
         ));
       }
@@ -548,38 +555,97 @@ export default function Header({ toggleSidebar }: HeaderProps) {
             </div>
           )}
         </div>
-        {/* User Profile Info */}
+        {/* User Profile Info with Dropdown */}
         {currentUser && (
-          <div className="flex items-center gap-3 border-l border-gray-200 pl-4 mr-2">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-sky-900 bg-gray-50 shadow-inner">
-              {currentUser.profileImage ? (
-                <img
-                  src={currentUser.profileImage.startsWith('http') ? currentUser.profileImage : `${process.env.NEXT_PUBLIC_IMAGE_URL}/images/StaffProfileImages/${currentUser.profileImage}`}
-                  alt={currentUser.fullName}
-                  className="h-full w-full object-cover"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    if (!target.src.includes('UserProfileImages')) {
-                      target.src = `${process.env.NEXT_PUBLIC_IMAGE_URL}/images/UserProfileImages/${currentUser.profileImage}`;
-                    }
-                  }}
-                />
-              ) : (
-                <span className="text-sm font-bold text-sky-900 uppercase">
-                  {currentUser.fullName?.charAt(0) || '?'}
+          <div className="relative border-l border-gray-200 pl-3 md:pl-4 mr-1 md:mr-2" ref={profileMenuRef}>
+            <button
+              type="button"
+              onClick={() => setShowProfileMenu(!showProfileMenu)}
+              className="flex items-center gap-2.5 p-1 rounded-xl hover:bg-gray-50 transition-all text-left group"
+              title="Click for account options"
+            >
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#a63c71]/40 bg-gray-50 shadow-inner group-hover:ring-2 group-hover:ring-[#a63c71]/30 transition-all">
+                {currentUser.profileImage ? (
+                  <img
+                    src={currentUser.profileImage.startsWith('http') ? currentUser.profileImage : `${process.env.NEXT_PUBLIC_IMAGE_URL}/images/StaffProfileImages/${currentUser.profileImage}`}
+                    alt={currentUser.fullName}
+                    className="h-full w-full object-cover"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      if (!target.src.includes('UserProfileImages')) {
+                        target.src = `${process.env.NEXT_PUBLIC_IMAGE_URL}/images/UserProfileImages/${currentUser.profileImage}`;
+                      }
+                    }}
+                  />
+                ) : (
+                  <span className="text-sm font-bold text-[#a63c71] uppercase">
+                    {currentUser.fullName?.charAt(0) || '?'}
+                  </span>
+                )}
+              </div>
+              <div className="hidden flex-col md:flex">
+                <span className="text-sm font-semibold text-gray-900 leading-tight">
+                  {currentUser.fullName}
                 </span>
-              )}
-            </div>
-            <div className="hidden flex-col md:flex">
-              <span className="text-sm font-semibold text-gray-900 leading-tight">
-                {currentUser.fullName}
-              </span>
-              <span className="text-[10px] font-medium text-blue-800 bg-blue-50 px-1.5 py-0.5 rounded-md mt-0.5 w-fit uppercase tracking-wider">
-                {currentUser.role?.roleName || 'Staff'}
-              </span>
-            </div>
+                <span className="text-[10px] font-medium text-[#a63c71] bg-[#a63c71]/10 px-1.5 py-0.5 rounded-md mt-0.5 w-fit uppercase tracking-wider">
+                  {currentUser.role?.roleName || 'Staff'}
+                </span>
+              </div>
+              {/* <ChevronDown className={`w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-transform duration-200 hidden md:block ${showProfileMenu ? 'rotate-180' : ''}`} /> */}
+            </button>
+
+            {/* Profile Dropdown Menu */}
+            {/* {showProfileMenu && (
+              <div className="absolute right-0 mt-2 w-64 rounded-xl bg-white shadow-2xl border border-gray-100 overflow-hidden z-50 animate-fadeIn">
+                <div className="p-4 bg-secondary text-white">
+                  <p className="text-xs text-white/80 font-medium">Signed in as</p>
+                  <p className="text-sm font-bold text-white truncate mt-0.5">{currentUser.fullName}</p>
+                  {currentUser.email && (
+                    <p className="text-xs text-white/80 truncate mt-0.5">{currentUser.email}</p>
+                  )}
+                  <span className="inline-block text-[10px] font-semibold text-[#a63c71] bg-white px-2 py-0.5 rounded-full mt-2 uppercase tracking-wide">
+                    {currentUser.role?.roleName || 'Staff'}
+                  </span>
+                </div>
+
+                <div className="p-2 space-y-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowProfileMenu(false);
+                      setShowChangePassword(true);
+                    }}
+                    className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-semibold text-gray-700 hover:bg-[#a63c71]/10 hover:text-[#a63c71] transition-colors"
+                  >
+                    <KeyRound className="w-4 h-4 text-[#a63c71]" />
+                    <span>Change Password</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowProfileMenu(false);
+                      handleLogout();
+                    }}
+                    className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors"
+                  >
+                    <LogOut className="w-4 h-4 text-red-500" />
+                    <span>Logout</span>
+                  </button>
+                </div>
+              </div>
+            )} */}
           </div>
         )}
+
+        {/* Change Password Quick Button */}
+        <button
+          onClick={() => setShowChangePassword(true)}
+          className="flex items-center justify-center h-10 w-10 rounded-full hover:bg-[#a63c71]/10 transition-all duration-200 text-gray-600 hover:text-[#a63c71]"
+          title="Change Password"
+        >
+          <KeyRound className="h-5 w-5" />
+        </button>
 
         <button
           onClick={handleLogout}
@@ -589,6 +655,14 @@ export default function Header({ toggleSidebar }: HeaderProps) {
           <LogOut className="h-5 w-5" />
         </button>
       </div>
+
+      {/* Change Password Modal */}
+      {showChangePassword && (
+        <ChangePasswordDialog
+          isOpen={showChangePassword}
+          onClose={() => setShowChangePassword(false)}
+        />
+      )}
     </header>
   );
 }
